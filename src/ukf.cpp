@@ -27,10 +27,10 @@ UKF::UKF() {
         0, 0, 0, 0, 1;
         
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 2.0;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 1.0;
 
   /**
    * DO NOT MODIFY measurement noise values below.
@@ -236,16 +236,24 @@ void UKF::Prediction(double delta_t) {
     // write predicted sigma point into right column
     VectorXd Xsig_col = VectorXd(n_x_);
     Xsig_col << px_p , py_p, v_p, yaw_p, yawd_p;
-    Xsig_col(0) = px_p;
     Xsig_pred_.col(i) = Xsig_col;
     
   }
 
+  x_.fill(0.0);
   for (int i = 0; i < 2 * n_aug_ + 1; ++i) {  // iterate over sigma points
     x_ = x_ + weights_(i) * Xsig_pred_.col(i);
   }
-  for (int i = 0; i != 2*n_aug_ + 1 ; i++){
-    P_ = P_ + weights_(i) * (Xsig_pred_.col(i) - x_) * (Xsig_pred_.col(i) - x_).transpose();
+
+  P_.fill(0.0);
+  for (int i = 0; i < 2 * n_aug_ + 1; ++i) {  // iterate over sigma points
+    // state difference
+    VectorXd x_diff = Xsig_pred_.col(i) - x_;
+    // angle normalization
+    while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
+    while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
+
+    P_ = P_ + weights_(i) * x_diff * x_diff.transpose() ;
   }
 }
 
